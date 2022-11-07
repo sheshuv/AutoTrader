@@ -105,8 +105,10 @@ public class RestApi {
 		ResponseEntity<AuthResponse> responseEntity = restTemplate
 				.postForEntity(ApiEndpoints.endpoint + ApiEndpoints.authorize, jd, AuthResponse.class);
 		authResponse = responseEntity.getBody();
-		IOUtils.write(new ObjectMapper().writeValueAsBytes(authResponse),
-				Files.newOutputStream(Paths.get("auth.json"), StandardOpenOption.CREATE));
+		if("Ok".equals(authResponse.getStat())) {
+			IOUtils.write(new ObjectMapper().writeValueAsBytes(authResponse),
+					Files.newOutputStream(Paths.get("auth.json"), StandardOpenOption.CREATE));
+		}
 		log.info("login responsae : {}", authResponse);
 
 	}
