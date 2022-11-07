@@ -43,27 +43,39 @@ public class AutoOrder {
 
 		PriceTraker tracker = new PriceTraker(api);
 		tracker.track("BANKNIFTY", "NSE");
-		try {
-			TimeUnit.SECONDS.sleep(5);
-			while (!stopOrder) {
-				log.info("AutoOrder status {}", this);
-				if (direction != null && direction != Direction.UP) {
-					if (tracker.getDirection() == Direction.UP) {
-						log.info("direction change {}", direction);
-						cancelPutOrder(tracker.getLastPrice());
-						callOrder(tracker.getLastPrice());
-					} else {
-						log.info("direction change {}", direction);
-						cancelCallOrder(tracker.getLastPrice());
-						putOrder(tracker.getLastPrice());
+		new Thread(() -> {
+			try {
+				TimeUnit.SECONDS.sleep(5);
+				while (!stopOrder) {
+					log.info("AutoOrder status {}", this);
+					Direction newDirection = tracker.getDirection();
+					if (newDirection != null && direction == null) {
+						direction = newDirection;
+						if (tracker.getDirection() == Direction.UP) {
+							log.info("direction change {}", direction);
+							callOrder(tracker.getLastPrice().get());
+						} else {
+							log.info("direction change {}", direction);
+							putOrder(tracker.getLastPrice().get());
+						}
+					} else if (direction != null) {
+						if (direction != Direction.UP && newDirection == Direction.UP) {
+							log.info("direction change {}", direction);
+							cancelPutOrder(tracker.getLastPrice().get());
+							callOrder(tracker.getLastPrice().get());
+						} else if (direction != Direction.DOWN && newDirection == Direction.DOWN) {
+							log.info("direction change {}", direction);
+							cancelCallOrder(tracker.getLastPrice().get());
+							putOrder(tracker.getLastPrice().get());
+						}
 					}
+					direction = tracker.getDirection();
+					TimeUnit.SECONDS.sleep(3);
 				}
-				direction = tracker.getDirection();
-				TimeUnit.SECONDS.sleep(3);
+			} catch (InterruptedException e) {
+				log.error("error");
 			}
-		} catch (InterruptedException e) {
-			log.error("error");
-		}
+		}).start();
 
 //		log.info("strikeprice {}", strikePrice);
 //		String scripString = String.format("BANKNIFTY10NOV22C%s", strikePrice.get() - 300);
@@ -84,43 +96,49 @@ public class AutoOrder {
 //		});
 	}
 
-	private void callOrder(AtomicInteger lastPrice) {
+	private void callOrder(int lastPrice) {
 		numberOfCallOrders.incrementAndGet();
-		lastCallOrderPrice.set(lastPrice.get());
+		lastCallOrderPrice.set(lastPrice);
 
 	}
 
-	private void putOrder(AtomicInteger lastPrice) {
+	private void putOrder(int lastPrice) {
 		numberOfPutOrders.incrementAndGet();
-		lastPutOrderPrice.set(lastPrice.get());
+		lastPutOrderPrice.set(lastPrice);
 	}
 
-	private void cancelCallOrder(AtomicInteger atomicInteger) {
+	private void cancelCallOrder(int currentPrice) {
 		log.info("cancelCallOrder");
 		int lastPrice = lastCallOrderPrice.get();
-		if (lastPrice > atomicInteger.get()) {
-			int delta = lastPrice - atomicInteger.get();
-			callOrderLossPoints.addAndGet(delta);
-			profitPoints.addAndGet(lastPrice);
-		} else {
-			int delta = atomicInteger.get() - lastPrice;
-			callOrderProfitsPoints.addAndGet(delta);
-			lossPoints.addAndGet(delta);
+		if (lastPrice != 0) {
+			if (lastPrice > currentPrice) {
+				int delta = lastPrice - currentPrice;
+				callOrderLossPoints.addAndGet(delta);
+				lossPoints.addAndGet(delta);
+			} else {
+				int delta = currentPrice - lastPrice;
+				callOrderProfitsPoints.addAndGet(delta);
+				profitPoints.addAndGet(delta);
+			}
 		}
+		lastCallOrderPrice.set(0);
 
 	}
 
-	private void cancelPutOrder(AtomicInteger atomicInteger) {
+	private void cancelPutOrder(int currentPrice) {
 		log.info("cancelPutOrder");
 		int lastPrice = lastPutOrderPrice.get();
-		if (lastPrice > atomicInteger.get()) {
-			int delta = lastPrice - atomicInteger.get();
-			putOrderLossPoints.addAndGet(delta);
-			profitPoints.addAndGet(lastPrice);
-		} else {
-			int delta = atomicInteger.get() - lastPrice;
-			putOrderProfitsPoints.addAndGet(delta);
-			lossPoints.addAndGet(delta);
+		if (lastPrice != 0) {
+			if (lastPrice > currentPrice) {
+				int delta = lastPrice - currentPrice;
+				putOrderLossPoints.addAndGet(delta);
+				lossPoints.addAndGet(delta);
+			} else {
+				int delta = currentPrice - lastPrice;
+				putOrderProfitsPoints.addAndGet(delta);
+				profitPoints.addAndGet(delta);
+			}
 		}
+		lastPutOrderPrice.set(0);
 	}
 }

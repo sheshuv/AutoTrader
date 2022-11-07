@@ -7,11 +7,11 @@ import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.jboss.aerogear.security.otp.Totp;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,9 +48,9 @@ public class RestApi {
 
 	public AuthResponse authResponse;
 	public WebSocketSession session;
-	
+
 	@Autowired
-	AuthRequest req;
+	AuthRequest authRequest;
 
 	private Map<String, SubscriptionCallback> subscriptions = new ConcurrentHashMap<String, SubscriptionCallback>();
 
@@ -65,8 +65,9 @@ public class RestApi {
 			jd = "jData=" + new ObjectMapper().writeValueAsString(req) + "&jKey=" + authResponse.getSusertoken();
 			log.info(jd);
 			HttpEntity<String> enitty = new HttpEntity<String>(jd);
-			ResponseEntity<SearchScripResult> exchange = restTemplate.exchange(ApiEndpoints.endpoint + ApiEndpoints.searchscrip,
-					HttpMethod.POST, enitty, new ParameterizedTypeReference<SearchScripResult>() {
+			ResponseEntity<SearchScripResult> exchange = restTemplate.exchange(
+					ApiEndpoints.endpoint + ApiEndpoints.searchscrip, HttpMethod.POST, enitty,
+					new ParameterizedTypeReference<SearchScripResult>() {
 					});
 			SearchScripResult body = exchange.getBody();
 			log.info("body {}", body);
@@ -94,18 +95,15 @@ public class RestApi {
 				}
 			}
 		}
-		AuthRequest authRequest = new AuthRequest();
 		String sha256hex = org.apache.commons.codec.digest.DigestUtils.sha256Hex(authRequest.getPwd());
 		authRequest.setPwd(sha256hex);
-		Scanner sc = new Scanner(System.in);
-		log.info("please enter otp/totp: ");
-//		String otp = sc.next();
-		authRequest.setFactor2("887330");
+		Totp totp = new Totp(authRequest.getTotptoken());
+		authRequest.setFactor2(totp.now());
 
 		String jd = "jData=" + new ObjectMapper().writeValueAsString(authRequest);
 		log.info(jd);
-		ResponseEntity<AuthResponse> responseEntity = restTemplate.postForEntity(ApiEndpoints.endpoint + ApiEndpoints.authorize, jd,
-				AuthResponse.class);
+		ResponseEntity<AuthResponse> responseEntity = restTemplate
+				.postForEntity(ApiEndpoints.endpoint + ApiEndpoints.authorize, jd, AuthResponse.class);
 		authResponse = responseEntity.getBody();
 		IOUtils.write(new ObjectMapper().writeValueAsBytes(authResponse),
 				Files.newOutputStream(Paths.get("auth.json"), StandardOpenOption.CREATE));
@@ -219,7 +217,9 @@ public class RestApi {
 //	}
 
 	public synchronized void sendMessage(String message) throws JsonProcessingException, IOException {
-		log.info("sending message {}", message);
+		if (!"{\"t\":\"h\"}".equals(message)) {
+			log.info("sending message {}", message);
+		}
 		if (session != null && session.isOpen()) {
 			session.sendMessage(new TextMessage(message.getBytes()));
 		}
@@ -351,15 +351,17 @@ public class RestApi {
 
 	public void subscribe(String token, String exchange, SubscriptionCallback callback) {
 		log.info("subscribe {} {}", token, exchange);
-		HashMap<String, String> req1 = new HashMap<>();
-		req1.put("t", "t");
-		req1.put("k", exchange + "|" + token + "#");
-		String reqString;
-		try {
-			reqString = new ObjectMapper().writeValueAsString(req1);
-			sendMessage(reqString);
-		} catch (IOException e) {
-			log.error("error {}", e);
+		if (!subscriptions.keySet().contains(token)) {
+			HashMap<String, String> req1 = new HashMap<>();
+			req1.put("t", "t");
+			req1.put("k", exchange + "|" + token + "#");
+			String reqString;
+			try {
+				reqString = new ObjectMapper().writeValueAsString(req1);
+				sendMessage(reqString);
+			} catch (IOException e) {
+				log.error("error {}", e);
+			}
 		}
 		subscriptions.put(token, callback);
 	}

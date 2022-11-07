@@ -45,7 +45,6 @@ public class AutoTrader {
 				while (true) {
 					try {
 						TimeUnit.SECONDS.sleep(10);
-						log.info("sending new message2");
 						api.sendMessage("{\"t\":\"h\"}");
 					} catch (InterruptedException | IOException e) {
 						log.error("error", e);

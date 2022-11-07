@@ -19,9 +19,10 @@ public class AuthRequest {
 	private String apkversion = "js:1.0.0";
 	private String uid = "FA78201";
 	private String pwd = "Sheshu@1";
+	private String totptoken;
 	private String factor2 = "";
 	private String vc = "FA78201_U";
 	private String apiSecret = "4ac9ec6346dd5feb9c49a0dbadbad7f9";
 	private String imei = "abc1234";
-	private String appkey="25f5cc8e6c45b80da5d854557c7ce62339e9ba3ab2ba33269d95b47c65895452";
+	private String appkey = "25f5cc8e6c45b80da5d854557c7ce62339e9ba3ab2ba33269d95b47c65895452";
 }
