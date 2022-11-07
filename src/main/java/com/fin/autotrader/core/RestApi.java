@@ -4,14 +4,18 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.jboss.aerogear.security.otp.Totp;
+import org.jboss.aerogear.security.otp.api.Clock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -97,7 +101,14 @@ public class RestApi {
 		}
 		String sha256hex = org.apache.commons.codec.digest.DigestUtils.sha256Hex(authRequest.getPwd());
 		authRequest.setPwd(sha256hex);
-		Totp totp = new Totp(authRequest.getTotptoken());
+		Totp totp = new Totp(authRequest.getTotptoken(), new Clock() {
+			@Override
+			public long getCurrentInterval() {
+				Calendar calendar = GregorianCalendar.getInstance(TimeZone.getTimeZone("IST"));
+		        long currentTimeSeconds = calendar.getTimeInMillis() / 1000;
+		        return currentTimeSeconds / 30;
+			}
+		});
 		authRequest.setFactor2(totp.now());
 
 		String jd = "jData=" + new ObjectMapper().writeValueAsString(authRequest);
