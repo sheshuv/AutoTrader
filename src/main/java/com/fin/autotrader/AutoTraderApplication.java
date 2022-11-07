@@ -35,10 +35,11 @@ public class AutoTraderApplication {
 	
 	
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
+		TimeZone.setDefault(TimeZone.getTimeZone("IST"));
 		ApplicationContext app = SpringApplication.run(AutoTraderApplication.class, args);
 
 		AutoTrader login = app.getBean(AutoTrader.class);
-		TimeZone.setDefault(TimeZone.getTimeZone("IST"));
+
 		RestApi api = app.getBean(RestApi.class);
 
 		login.init();
