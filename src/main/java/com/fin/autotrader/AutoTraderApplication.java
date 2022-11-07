@@ -1,5 +1,7 @@
 package com.fin.autotrader;
 
+import java.util.TimeZone;
+
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -36,7 +38,7 @@ public class AutoTraderApplication {
 		ApplicationContext app = SpringApplication.run(AutoTraderApplication.class, args);
 
 		AutoTrader login = app.getBean(AutoTrader.class);
-		
+		TimeZone.setDefault(TimeZone.getTimeZone("IST"));
 		RestApi api = app.getBean(RestApi.class);
 
 		login.init();
