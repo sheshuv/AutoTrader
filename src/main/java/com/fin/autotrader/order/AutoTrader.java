@@ -26,14 +26,16 @@ public class AutoTrader {
 
 	@Autowired
 	AutoOrder order;
+	
+	
 
 	public void init() {
 		try {
 			api.login();
 
 			HashMap<String, String> req = new HashMap<>();
-			req.put("uid", "FA78201");
-			req.put("actid", "FA78201");
+			req.put("uid", api.authResponse.getActid());
+			req.put("actid", api.authResponse.getActid());
 			req.put("susertoken", api.authResponse.getSusertoken());
 			req.put("t", "c");
 			req.put("source", "API");
