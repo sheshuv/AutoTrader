@@ -100,7 +100,10 @@ public class RestApi {
 			}
 		}
 		String sha256hex = org.apache.commons.codec.digest.DigestUtils.sha256Hex(authRequest.getPwd());
+		String userAppkey = authRequest.getUid()+"|"+authRequest.getApiSecret();
+		String appKey = org.apache.commons.codec.digest.DigestUtils.sha256Hex(userAppkey);
 		authRequest.setPwd(sha256hex);
+		authRequest.setAppkey(appKey);
 		Totp totp = new Totp(authRequest.getTotptoken(), new Clock() {
 			@Override
 			public long getCurrentInterval() {
